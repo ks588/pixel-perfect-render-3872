@@ -35,7 +35,7 @@ export type PolicySettings = {
   min180DayVelocity: number;
 };
 
-export type ApprovalStatus = "auto_approved" | "needs_approval" | "approved" | "rejected";
+export type ApprovalStatus = "auto_approved" | "needs_approval" | "approved" | "rejected" | "dispatched";
 
 export type ReorderRequest = {
   requestId: string;
@@ -62,9 +62,14 @@ export type LogEntry = {
 
 export type Persona = {
   id: string;
+  name: string;
   label: string;
-  role: "branch" | "admin";
+  role: "branch" | "admin" | "warehouse";
   branchId?: string;
+  branchName?: string;
+  department: string;
+  initials: string;
+  description: string;
 };
 
 export type ItemStatus = "normal" | "low" | "auto_reordered" | "escalated" | "blocked";

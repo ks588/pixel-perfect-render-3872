@@ -20,6 +20,7 @@ import { evaluateReorder, nextRequestId } from "./engine";
 import type {
   InventoryItem,
   LogEntry,
+  Persona,
   PolicySettings,
   ReorderRequest,
   WarehouseRow,
@@ -50,9 +51,11 @@ function write(key: string, value: unknown) {
 
 type Ctx = {
   hydrated: boolean;
+  isLoggedIn: boolean;
   personaId: string;
-  setPersonaId: (id: string) => void;
-  persona: (typeof PERSONAS)[number];
+  persona: Persona;
+  login: (id: string) => void;
+  logout: () => void;
   branches: typeof BRANCHES;
   inventory: InventoryItem[];
   warehouse: WarehouseRow[];
@@ -68,6 +71,7 @@ type Ctx = {
   manualReorder: (item: InventoryItem, qty: number) => void;
   approve: (requestId: string) => void;
   reject: (requestId: string, note: string) => void;
+  dispatchOrder: (requestId: string) => void;
   resetDemo: () => void;
 };
 
@@ -75,7 +79,8 @@ const KFContext = createContext<Ctx | null>(null);
 
 export function KFProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
-  const [personaId, setPersonaId] = useState("bm-col");
+  const [personaId, setPersonaId] = useState<string>("bm-col");
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [warehouse, setWarehouse] = useState<WarehouseRow[]>([]);
   const [policy, setPolicy] = useState<PolicySettings>(DEFAULT_POLICY);
@@ -91,21 +96,49 @@ export function KFProvider({ children }: { children: ReactNode }) {
     setPolicy(read(STORAGE_KEYS.policy, DEFAULT_POLICY));
     setRequests(read<ReorderRequest[]>(STORAGE_KEYS.requests, []));
     setLogs(read<LogEntry[]>(STORAGE_KEYS.logs, []));
+
+    const savedUser = window.localStorage.getItem(STORAGE_KEYS.activeUser);
+    if (savedUser && PERSONAS.some((p) => p.id === savedUser)) {
+      setPersonaId(savedUser);
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+    }
+
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (hydrated) write(STORAGE_KEYS.inventory, inventory);
   }, [hydrated, inventory]);
+
   useEffect(() => {
     if (hydrated) write(STORAGE_KEYS.warehouse, warehouse);
   }, [hydrated, warehouse]);
+
   useEffect(() => {
     if (hydrated) write(STORAGE_KEYS.requests, requests);
   }, [hydrated, requests]);
+
   useEffect(() => {
     if (hydrated) write(STORAGE_KEYS.logs, logs);
   }, [hydrated, logs]);
+
+  const login = useCallback((id: string) => {
+    setPersonaId(id);
+    setIsLoggedIn(true);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(STORAGE_KEYS.activeUser, id);
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    setIsLoggedIn(false);
+    setRunning(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEYS.activeUser);
+    }
+  }, []);
 
   const pushLog = useCallback((kind: LogEntry["kind"], message: string) => {
     setLogs((prev) =>
@@ -126,7 +159,6 @@ export function KFProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  /** Applies a sale then runs the rules engine for the affected item. */
   const simulateSale = useCallback(
     (branchId: string, sku: string, qty = 1) => {
       setInventory((prevInv) => {
@@ -144,13 +176,12 @@ export function KFProvider({ children }: { children: ReactNode }) {
           `${branchName(branchId)} sold ${sold} unit${sold > 1 ? "s" : ""} of ${sku} (Stock: ${updated.currentStock}/${updated.reorderThreshold})`,
         );
 
-        // Evaluate reorder rules against the freshest policy/warehouse/request state.
         setRequests((prevReq) => {
           const openExists = prevReq.some(
             (r) =>
               r.sku === sku &&
               r.branchId === branchId &&
-              (r.approvalStatus === "needs_approval" || r.approvalStatus === "auto_approved"),
+              (r.approvalStatus === "needs_approval" || r.approvalStatus === "auto_approved" || r.approvalStatus === "approved"),
           );
           const wh = warehouseRef.current.find((w) => w.sku === sku);
           const result = evaluateReorder(updated, policyRef.current, wh, openExists);
@@ -165,11 +196,11 @@ export function KFProvider({ children }: { children: ReactNode }) {
             `Threshold breached on ${sku}. Engine calculating replenishment of ${req.requestedQty} units to target cover.`,
           );
           if (req.approvalStatus === "auto_approved") {
-            pushLog("POLICY CHECK", `In-policy and auto-approval enabled → auto-approved (${req.requestId}).`);
+            pushLog("POLICY CHECK", `In-policy and auto-approval enabled — auto-approved (${req.requestId}).`);
           } else {
             pushLog(
               "POLICY CHECK",
-              `${req.escalationReasons[0]} → Escalated to Retail LOB Lead (${req.requestId}).`,
+              `${req.escalationReasons[0]} — Escalated to Retail LOB Lead (${req.requestId}).`,
             );
           }
           return [req, ...prevReq];
@@ -181,7 +212,6 @@ export function KFProvider({ children }: { children: ReactNode }) {
     [branchName, pushLog],
   );
 
-  // Keep latest policy/warehouse available inside state updaters.
   const policyRef = useRef(policy);
   const warehouseRef = useRef(warehouse);
   policyRef.current = policy;
@@ -224,6 +254,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
         reasons.push(`Below minimum order quantity (${policyRef.current.minOrderQuantity})`);
       const totalValue = qty * item.unitCost;
       if (totalValue > policyRef.current.branchBudgetCap) reasons.push("Exceeds branch budget limit");
+
       const auto = reasons.length === 0 && policyRef.current.autoApproveInPolicyOrders;
       if (!auto && reasons.length === 0) reasons.push("Human sign-off required by enterprise policy");
 
@@ -241,6 +272,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
         origin: "manual",
         createdAt: new Date().toISOString(),
       };
+
       setRequests((prev) => [req, ...prev]);
       pushLog(
         "POLICY CHECK",
@@ -276,16 +308,32 @@ export function KFProvider({ children }: { children: ReactNode }) {
       setRequests((prev) =>
         prev.map((r) => {
           if (r.requestId !== requestId) return r;
-          fulfil(r);
           pushLog(
             "APPROVAL",
-            `${requestId} approved — ${r.requestedQty} × ${r.sku} dispatched to ${branchName(r.branchId)}.`,
+            `${requestId} approved — awaiting physical dispatch to ${branchName(r.branchId)}.`,
           );
           return { ...r, approvalStatus: "approved" as const };
         }),
       );
     },
-    [branchName, fulfil, pushLog],
+    [branchName, pushLog],
+  );
+
+  const dispatchOrder = useCallback(
+    (requestId: string) => {
+      setRequests((prev) =>
+        prev.map((r) => {
+          if (r.requestId !== requestId) return r;
+          fulfil(r);
+          pushLog(
+            "SYSTEM",
+            `${requestId} dispatched from DC — ${r.requestedQty} units of ${r.sku} in transit to ${branchName(r.branchId)}.`
+          );
+          return { ...r, approvalStatus: "dispatched" as const };
+        })
+      );
+    },
+    [branchName, fulfil, pushLog]
   );
 
   const reject = useCallback(
@@ -328,9 +376,11 @@ export function KFProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       hydrated,
+      isLoggedIn,
       personaId,
-      setPersonaId,
       persona,
+      login,
+      logout,
       branches: BRANCHES,
       inventory,
       warehouse,
@@ -346,12 +396,16 @@ export function KFProvider({ children }: { children: ReactNode }) {
       manualReorder,
       approve,
       reject,
+      dispatchOrder,
       resetDemo,
     }),
     [
       hydrated,
+      isLoggedIn,
       personaId,
       persona,
+      login,
+      logout,
       inventory,
       warehouse,
       policy,
@@ -364,6 +418,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
       manualReorder,
       approve,
       reject,
+      dispatchOrder,
       resetDemo,
     ],
   );

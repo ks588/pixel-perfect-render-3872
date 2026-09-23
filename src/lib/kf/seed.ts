@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   policy: "kf_policy_settings",
   requests: "kf_reorder_requests",
   logs: "kf_event_log",
+  activeUser: "kf_active_persona_id",
 } as const;
 
 export const BRANCHES: Branch[] = [
@@ -24,17 +25,44 @@ export const BRANCHES: Branch[] = [
 export const PERSONAS: Persona[] = [
   {
     id: "bm-col",
-    label: "Branch Stock Manager — Colombo 03 (Flagship)",
+    name: "Kavindu Perera",
+    label: "Branch Stock Manager — Colombo 03",
     role: "branch",
     branchId: "COL-03",
+    branchName: "Colombo 03 (Flagship)",
+    department: "Retail Store Operations",
+    initials: "KP",
+    description: "Monitors stock levels, initiates branch replenishment, and triggers sales simulation for Colombo Flagship.",
   },
   {
     id: "bm-kcc",
-    label: "Branch Stock Manager — Kandy City Centre",
+    name: "Sachini Wickramasinghe",
+    label: "Branch Stock Manager — Kandy",
     role: "branch",
     branchId: "KCC-01",
+    branchName: "Kandy City Centre",
+    department: "Retail Store Operations",
+    initials: "SW",
+    description: "Store-scoped inventory manager for the Kandy City Centre outlet. Manages local stock and cover days.",
   },
-  { id: "admin", label: "Admin / Retail LOB Lead", role: "admin" },
+  {
+    id: "admin",
+    name: "Dinith Wickramanayake",
+    label: "Admin / Retail LOB Lead",
+    role: "admin",
+    department: "Group Merchandising & Supply Chain",
+    initials: "DW",
+    description: "Group-wide governance authority. Reviews out-of-policy escalations, enforces budget caps, and controls global rules.",
+  },
+  {
+    id: "dc-manager",
+    name: "Nuwan Jayasuriya",
+    label: "Distribution Center Manager",
+    role: "warehouse",
+    department: "Merchandising & Supply Chain",
+    initials: "NJ",
+    description: "Monitors central warehouse availability and dispatches approved replenishment requests to branches.",
+  }
 ];
 
 export const DEFAULT_POLICY: PolicySettings = {

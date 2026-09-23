@@ -12,6 +12,7 @@ export type EngineResult =
   | { outcome: "request"; request: ReorderRequest };
 
 let counter = 1000;
+
 export function nextRequestId() {
   counter += 1;
   return `REQ-${counter}`;
@@ -37,6 +38,7 @@ export function evaluateReorder(
 
   const needed = item.targetCoverUnits - (item.currentStock + item.inTransitStock);
   const orderQty = Math.max(needed, policy.minOrderQuantity);
+
   const reasons: string[] = [];
   const available = warehouse?.centralStockAvailable ?? 0;
 
@@ -89,9 +91,10 @@ export function itemStatus(
     (r) =>
       r.sku === item.sku &&
       r.branchId === item.branchId &&
-      (r.approvalStatus === "needs_approval" || r.approvalStatus === "auto_approved"),
+      (r.approvalStatus === "needs_approval" || r.approvalStatus === "auto_approved" || r.approvalStatus === "approved"),
   );
   if (open) return open.approvalStatus === "auto_approved" ? "auto_reordered" : "escalated";
+
   if (item.unitsSoldLast180Days < policy.min180DayVelocity) return "blocked";
   if (item.currentStock + item.inTransitStock <= item.reorderThreshold) return "low";
   return "normal";
