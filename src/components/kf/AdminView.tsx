@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Inbox, ShieldCheck, X } from "lucide-react";
+import { Check, Edit2, Inbox, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,18 +11,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { LKR, useKF } from "@/lib/kf/store";
 import { STATUS_META, daysOfCover, itemStatus } from "@/lib/kf/engine";
-import type { PolicySettings } from "@/lib/kf/types";
+import type { PolicySettings, ReorderRequest } from "@/lib/kf/types";
 
 export function AdminView() {
-  const { branches, inventory, requests, policy, savePolicy, approve, reject } = useKF();
+  const { branches, inventory, requests, policy, savePolicy, approve, editAndApprove, reject } = useKF();
+
   const [branchFilter, setBranchFilter] = useState("all");
   const [draft, setDraft] = useState<PolicySettings>(policy);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  
+  // State for Edit & Approve Modal
+  const [editModal, setEditModal] = useState<ReorderRequest | null>(null);
+  const [editQty, setEditQty] = useState(0);
 
   const pending = requests.filter((r) => r.approvalStatus === "needs_approval");
+
   const rows = useMemo(
     () => (branchFilter === "all" ? inventory : inventory.filter((i) => i.branchId === branchFilter)),
     [inventory, branchFilter],
@@ -33,7 +47,7 @@ export function AdminView() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Central Admin — Retail LOB Lead</h2>
+        <h2 className="text-lg font-semibold text-foreground">Central Admin | Retail LOB Lead</h2>
         <p className="text-sm text-muted-foreground">
           Group-level visibility across all branches, escalation approvals and guardrail configuration.
         </p>
@@ -48,12 +62,14 @@ export function AdminView() {
               {pending.length} awaiting sign-off
             </span>
           </div>
+
           <div className="divide-y divide-border">
             {pending.length === 0 && (
               <p className="px-4 py-10 text-center text-sm text-muted-foreground">
                 No replenishment requests awaiting approval.
               </p>
             )}
+
             {pending.map((r) => (
               <div key={r.requestId} className="space-y-3 px-4 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -78,6 +94,7 @@ export function AdminView() {
                     </div>
                   </div>
                 </div>
+
                 <ul className="space-y-1">
                   {r.escalationReasons.map((reason) => (
                     <li key={reason} className="rounded-md bg-warning/10 px-2.5 py-1.5 text-xs text-warning">
@@ -85,12 +102,26 @@ export function AdminView() {
                     </li>
                   ))}
                 </ul>
-                <div className="flex flex-wrap items-center gap-2">
+
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Button size="sm" onClick={() => { approve(r.requestId); toast.success(`${r.requestId} approved`); }}>
-                    <Check className="size-3.5" /> Approve
+                    <Check className="size-3.5 mr-1" /> Approve
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setEditModal(r);
+                      setEditQty(r.requestedQty);
+                    }}
+                  >
+                    <Edit2 className="size-3.5 mr-1" /> Edit & Approve
+                  </Button>
+                  
+                  <div className="flex-1" />
+                  
                   <Input
-                    className="h-9 max-w-xs"
+                    className="h-9 w-[220px]"
                     placeholder="Rejection note (required)"
                     value={notes[r.requestId] ?? ""}
                     onChange={(e) => setNotes((n) => ({ ...n, [r.requestId]: e.target.value }))}
@@ -108,7 +139,7 @@ export function AdminView() {
                       toast.success(`${r.requestId} rejected`);
                     }}
                   >
-                    <X className="size-3.5" /> Reject
+                    <X className="size-3.5 mr-1" /> Reject
                   </Button>
                 </div>
               </div>
@@ -208,7 +239,7 @@ export function AdminView() {
                     <td className="px-3 py-2.5 text-right tabular-nums text-info">{item.inTransitStock}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{item.reorderThreshold}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
-                      {Number.isFinite(cover) ? `${cover.toFixed(1)}d` : "—"}
+                      {Number.isFinite(cover) ? `${cover.toFixed(1)}d` : "∞"}
                     </td>
                     <td className="px-3 py-2.5">
                       <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium ${meta.className}`}>
@@ -222,6 +253,48 @@ export function AdminView() {
           </table>
         </div>
       </section>
+
+      {/* EDIT MODAL */}
+      <Dialog open={!!editModal} onOpenChange={(o) => !o && setEditModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit & Approve Request {editModal?.requestId}</DialogTitle>
+            <DialogDescription>
+              Adjust the requested quantity to bring this order back within policy limits.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <Label htmlFor="edit-qty">Approved quantity (units)</Label>
+            <Input
+              id="edit-qty"
+              type="number"
+              min={1}
+              value={editQty}
+              onChange={(e) => setEditQty(Number(e.target.value))}
+            />
+            <div className="rounded border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+              <p>Original request: <span className="font-semibold text-foreground">{editModal?.requestedQty} units</span></p>
+              <p>Line limit cap: <span className="font-semibold text-foreground">{policy.maxOrderQuantity} units</span></p>
+              <p>Revised total value: <span className="font-semibold text-foreground">{LKR(editQty * (editModal?.unitCost ?? 0))}</span></p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModal(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!editModal || editQty <= 0) return;
+                editAndApprove(editModal.requestId, editQty);
+                toast.success(`Request ${editModal.requestId} updated to ${editQty} units and approved`);
+                setEditModal(null);
+              }}
+            >
+              Confirm & Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

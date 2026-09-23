@@ -99,27 +99,30 @@ export function TopNav() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1">
-              <span className="relative flex size-2.5">
-                {running && (
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
-                )}
-                <span
-                  className={`relative inline-flex size-2.5 rounded-full ${
-                    running ? "bg-success" : "bg-muted-foreground/40"
-                  }`}
-                />
-              </span>
-              <Button
-                size="sm"
-                variant={running ? "secondary" : "default"}
-                onClick={() => setRunning(!running)}
-                className="cursor-pointer h-7 text-xs"
-              >
-                {running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-                {running ? "Pause" : "Play"}
-              </Button>
-            </div>
+            {/* Automation Toggle - Hidden for DC Managers */}
+            {!isWarehouse && (
+              <div className="flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1">
+                <span className="relative flex size-2.5">
+                  {running && (
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
+                  )}
+                  <span
+                    className={`relative inline-flex size-2.5 rounded-full ${
+                      running ? "bg-success" : "bg-muted-foreground/40"
+                    }`}
+                  />
+                </span>
+                <Button
+                  size="sm"
+                  variant={running ? "secondary" : "default"}
+                  onClick={() => setRunning(!running)}
+                  className="cursor-pointer h-7 text-xs font-semibold"
+                >
+                  {running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+                  {running ? "Auto-Reorder: ON" : "Auto-Reorder: OFF"}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

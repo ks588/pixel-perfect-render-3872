@@ -70,6 +70,7 @@ type Ctx = {
   simulateSale: (branchId: string, sku: string, qty?: number) => void;
   manualReorder: (item: InventoryItem, qty: number) => void;
   approve: (requestId: string) => void;
+  editAndApprove: (requestId: string, newQty: number) => void;
   reject: (requestId: string, note: string) => void;
   dispatchOrder: (requestId: string) => void;
   resetDemo: () => void;
@@ -167,6 +168,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
         const item = prevInv[idx]!;
         const sold = Math.min(qty, Math.max(item.currentStock, 0));
         if (sold <= 0) return prevInv;
+
         const updated = { ...item, currentStock: item.currentStock - sold };
         const next = [...prevInv];
         next[idx] = updated;
@@ -319,6 +321,29 @@ export function KFProvider({ children }: { children: ReactNode }) {
     [branchName, pushLog],
   );
 
+  const editAndApprove = useCallback(
+    (requestId: string, newQty: number) => {
+      setRequests((prev) =>
+        prev.map((r) => {
+          if (r.requestId !== requestId) return r;
+          const oldQty = r.requestedQty;
+          const updatedReq = {
+            ...r,
+            requestedQty: newQty,
+            totalValue: newQty * r.unitCost,
+            approvalStatus: "approved" as const,
+          };
+          pushLog(
+            "APPROVAL",
+            `${requestId} edited (${oldQty} -> ${newQty} units) and approved — awaiting physical dispatch to ${branchName(r.branchId)}.`
+          );
+          return updatedReq;
+        })
+      );
+    },
+    [branchName, pushLog]
+  );
+
   const dispatchOrder = useCallback(
     (requestId: string) => {
       setRequests((prev) =>
@@ -395,6 +420,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
       simulateSale,
       manualReorder,
       approve,
+      editAndApprove,
       reject,
       dispatchOrder,
       resetDemo,
@@ -417,6 +443,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
       simulateSale,
       manualReorder,
       approve,
+      editAndApprove,
       reject,
       dispatchOrder,
       resetDemo,
