@@ -32,7 +32,9 @@ jobs:
       - name: Build with Vite
         run: |
           npm run build
-          cp dist/index.html dist/404.html 
+          # TanStack Start outputs client assets to .output/public
+          # Copy the generated index.html to 404.html to fix GitHub Pages SPA routing
+          cp .output/public/index.html .output/public/404.html 
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -40,7 +42,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          # Point the deployment to the correct Nitro output directory
+          path: './.output/public'
 
   deploy:
     environment:
