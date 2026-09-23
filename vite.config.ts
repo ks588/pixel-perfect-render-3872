@@ -1,7 +1,7 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
-  // Make sure this matches your exact GitHub repository name
+  // Replace "kelly-felder-prototype" with your exact GitHub repository name
   base: "/kelly-felder-prototype/",
   vite: {
     resolve: {
@@ -10,7 +10,7 @@ export default defineConfig({
   },
   tanstackStart: {
     server: { entry: "server" },
-    // Enable static HTML generation so GitHub Pages has an index.html to serve
+    // Forces TanStack Start to prerender static HTML for GitHub Pages
     prerender: {
       routes: ["/"],
       crawlLinks: true,
