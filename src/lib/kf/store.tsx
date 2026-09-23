@@ -132,7 +132,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
       setInventory((prevInv) => {
         const idx = prevInv.findIndex((i) => i.branchId === branchId && i.sku === sku);
         if (idx === -1) return prevInv;
-        const item = prevInv[idx];
+        const item = prevInv[idx]!;
         const sold = Math.min(qty, Math.max(item.currentStock, 0));
         if (sold <= 0) return prevInv;
         const updated = { ...item, currentStock: item.currentStock - sold };
@@ -197,7 +197,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
       if (pool.length === 0) return;
       const picks = Math.random() > 0.5 ? 2 : 1;
       for (let n = 0; n < picks; n += 1) {
-        const item = pool[Math.floor(Math.random() * pool.length)];
+        const item = pool[Math.floor(Math.random() * pool.length)]!;
         simulateSale(item.branchId, item.sku, 1 + Math.floor(Math.random() * 3));
       }
     }, speed);
@@ -323,7 +323,7 @@ export function KFProvider({ children }: { children: ReactNode }) {
     ]);
   }, []);
 
-  const persona = PERSONAS.find((p) => p.id === personaId) ?? PERSONAS[0];
+  const persona = PERSONAS.find((p) => p.id === personaId) ?? PERSONAS[0]!;
 
   const value = useMemo<Ctx>(
     () => ({

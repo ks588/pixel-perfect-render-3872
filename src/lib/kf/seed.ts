@@ -65,8 +65,8 @@ const CATALOG: CatalogRow[] = [
 ];
 
 function seededItem(row: CatalogRow, branchId: string, i: number, b: number): InventoryItem {
-  const base = [46, 18, 9, 31, 14, 7, 22, 4][(i + b * 3) % 8];
-  const rate = [2.4, 1.1, 0.6, 1.8, 0.9, 0.3, 1.4, 0.2][(i + b) % 8];
+  const base = [46, 18, 9, 31, 14, 7, 22, 4][(i + b * 3) % 8]!;
+  const rate = [2.4, 1.1, 0.6, 1.8, 0.9, 0.3, 1.4, 0.2][(i + b) % 8]!;
   const flagship = branchId === "COL-03";
   const dailyRunRate = Number((rate * (flagship ? 1.35 : 1)).toFixed(2));
   return {
@@ -94,7 +94,7 @@ export function seedInventory(): InventoryItem[] {
 export function seedWarehouse(): WarehouseRow[] {
   return CATALOG.map((row, i) => ({
     sku: row.sku,
-    centralStockAvailable: [140, 96, 62, 210, 18, 74, 41, 130][i],
-    reservedQty: [10, 0, 4, 20, 0, 6, 2, 12][i],
+    centralStockAvailable: [140, 96, 62, 210, 18, 74, 41, 130][i] ?? 80,
+    reservedQty: [10, 0, 4, 20, 0, 6, 2, 12][i] ?? 0,
   }));
 }
