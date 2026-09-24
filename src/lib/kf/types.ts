@@ -64,7 +64,7 @@ export type Persona = {
   id: string;
   name: string;
   label: string;
-  role: "branch" | "admin" | "warehouse";
+  role: "branch" | "admin" | "warehouse" | "executive";
   branchId?: string;
   branchName?: string;
   department: string;

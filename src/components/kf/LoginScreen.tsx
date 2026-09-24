@@ -28,6 +28,7 @@ const AVATAR_STYLES: Record<string, string> = {
   "bm-col": "bg-[#e8dfd8] text-[#5c4738]",
   "bm-kcc": "bg-[#f3dbcf] text-[#6b3d22]",
   admin: "bg-[#e2d5ec] text-[#482860]",
+  board: "bg-[#dbe4d3] text-[#34502a]",
   "dc-manager": "bg-[#d8e5e8] text-[#244b54]",
 };
 
