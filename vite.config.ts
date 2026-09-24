@@ -2,8 +2,8 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   // Replace "kelly-felder-prototype" with your exact GitHub repository name
-  base: "/kelly-felder-prototype/",
   vite: {
+    base: "/kelly-felder-prototype/",
     resolve: {
       tsconfigPaths: true,
     },
