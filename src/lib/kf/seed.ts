@@ -62,7 +62,16 @@ export const PERSONAS: Persona[] = [
     department: "Merchandising & Supply Chain",
     initials: "NJ",
     description: "Monitors central warehouse availability and dispatches approved replenishment requests to branches.",
-  }
+  },
+  {
+    id: "board",
+    name: "Anushka Fernando",
+    label: "Board / Executive",
+    role: "executive",
+    department: "Group Board & Executive Office",
+    initials: "AF",
+    description: "Sees the group-wide daily exception and performance rollup with the AI morning brief.",
+  },
 ];
 
 export const DEFAULT_POLICY: PolicySettings = {

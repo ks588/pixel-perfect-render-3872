@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { ExceptionRollup } from "@/components/kf/ExceptionRollup";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -34,6 +36,7 @@ export const Route = createFileRoute("/")({
 
 function Workspace() {
   const { persona, hydrated, resetDemo, isLoggedIn } = useKF();
+  const [tab, setTab] = useState<"reorder" | "rollup">("reorder");
 
   if (!hydrated) {
     return (
@@ -56,9 +59,28 @@ function Workspace() {
     <div className="min-h-screen bg-background pb-64">
       <TopNav />
       <main className="mx-auto max-w-[1600px] px-4 py-6 lg:px-8">
-        {persona.role === "admin" && <AdminView />}
-        {persona.role === "warehouse" && <WarehouseView />}
-        {persona.role === "branch" && <BranchView branchId={persona.branchId!} />}
+        {persona.role !== "executive" && persona.role !== "warehouse" && (
+          <div className="mb-6 inline-flex rounded-lg border border-border bg-secondary/50 p-1">
+            {(["reorder", "rollup"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${tab === t ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {t === "reorder" ? "Reorder Engine (7.5)" : "Exception Rollup (7.4)"}
+              </button>
+            ))}
+          </div>
+        )}
+        {persona.role === "executive" || tab === "rollup" && persona.role !== "warehouse" ? (
+          <ExceptionRollup />
+        ) : (
+          <>
+            {persona.role === "admin" && <AdminView />}
+            {persona.role === "warehouse" && <WarehouseView />}
+            {persona.role === "branch" && <BranchView branchId={persona.branchId!} />}
+          </>
+        )}
         
         <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5 text-xs text-muted-foreground">
           <p>
